@@ -35,6 +35,10 @@ public static class MascotNative {
     public const int WS_EX_TRANSPARENT = 0x20;
     [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
     [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+    // 트레이 메뉴는 우리 창이 포그라운드가 아니면 딴 데를 눌러도 안 닫힌다
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+    // Icon.FromHandle 은 HICON 소유권을 안 가져가므로 직접 지워야 한다
+    [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr hIcon);
 }
 "@
 
@@ -58,7 +62,7 @@ $Sizes = @{
 }
 $SizeOrder = @('tiny', 'small', 'medium', 'large')
 
-$Settings = @{ size = 'tiny'; left = -1.0; top = -1.0; onTop = $true; clickThrough = $false }
+$Settings = @{ size = 'tiny'; left = $null; top = $null; onTop = $true; clickThrough = $false }
 if (Test-Path $SettingsFile) {
     try {
         $loaded = Get-Content $SettingsFile -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -214,6 +218,7 @@ $capText = New-Object System.Windows.Controls.TextBlock
 $capText.FontWeight = 'SemiBold'
 $capText.TextTrimming = 'CharacterEllipsis'
 $capBorder.Child = $capText
+$capBorder.Visibility = 'Collapsed'   # 내용이 생기기 전엔 빈 알약을 띄우지 않는다
 $rootGrid.Children.Add($capBorder) | Out-Null
 
 # 세션 개수 배지
@@ -424,7 +429,9 @@ $pollTimer.Add_Tick({
     $task = $script:Pending
     $script:Pending = $null
     if ($task.IsFaulted -or $task.IsCanceled) {
-        $viewbox.Opacity = 0.4      # 서버가 끊기면 흐리게
+        $viewbox.Opacity = 0.4              # 서버가 끊기면 흐리게
+        $capBorder.Visibility = 'Collapsed' # 빈 알약이 남지 않게
+        $badgeBorder.Visibility = 'Collapsed'
         return
     }
     $viewbox.Opacity = 1.0
@@ -436,6 +443,8 @@ $pollTimer.Add_Tick({
 # (맥 판과 같은 방식: 커서 위치를 보고 WS_EX_TRANSPARENT 를 켰다 껐다 한다)
 
 $script:Handle = [IntPtr]::Zero
+$script:TrayHandle = [IntPtr]::Zero
+$script:Dragging = $false
 $script:IsThrough = $false
 
 function Set-ClickThrough([bool]$on) {
@@ -451,6 +460,7 @@ function Set-ClickThrough([bool]$on) {
 $hitTimer = New-Object System.Windows.Threading.DispatcherTimer
 $hitTimer.Interval = [TimeSpan]::FromMilliseconds(120)
 $hitTimer.Add_Tick({
+    if ($script:Dragging) { return }   # 드래그 중엔 건드리지 않는다
     if ([bool]$Settings.clickThrough) { Set-ClickThrough $true; return }
     try {
         $p = [System.Windows.Forms.Cursor]::Position
@@ -508,9 +518,16 @@ function Update-Tray {
         $g.FillRectangle($dark, 9, 6, 2, 2)
         $g.Dispose(); $br.Dispose(); $dark.Dispose()
 
-        $old = $notify.Icon
-        $notify.Icon = [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
-        if ($old) { $old.Dispose() }
+        $handle = $bmp.GetHicon()
+        $oldIcon = $notify.Icon
+        $oldHandle = $script:TrayHandle
+        $notify.Icon = [System.Drawing.Icon]::FromHandle($handle)
+        $script:TrayHandle = $handle
+        if ($oldIcon) { $oldIcon.Dispose() }
+        # Icon.FromHandle 은 HICON 을 소유하지 않아서 Dispose 로는 안 지워진다
+        if ($oldHandle -and $oldHandle -ne [IntPtr]::Zero) {
+            try { [MascotNative]::DestroyIcon($oldHandle) | Out-Null } catch { }
+        }
         $bmp.Dispose()
 
         $label = ''
@@ -565,8 +582,14 @@ function Build-Menu {
         $k = $key
         $sub = New-Object System.Windows.Forms.ToolStripMenuItem $Sizes[$k].title
         $sub.Checked = ($Settings.size -eq $k)
+        $sub.Tag = $k
+        # Tag 와 캡처변수 두 경로를 모두 둔다. PowerShell 판(5.1 vs 7)에 따라
+        # 클로저 안에서의 변수/명령 해석이 다를 수 있어 어느 쪽이든 동작하게 한다.
         $sub.Add_Click({
-            Set-PetSize $k
+            $key = ''
+            try { $key = [string]$this.Tag } catch { }
+            if (-not $key) { $key = $k }
+            Set-PetSize $key
             Save-Settings
         }.GetNewClosure())
         $sizeItem.DropDownItems.Add($sub) | Out-Null
@@ -591,6 +614,7 @@ $notify.Add_MouseUp({
     if ($_.Button -eq [System.Windows.Forms.MouseButtons]::Right -or $_.Button -eq [System.Windows.Forms.MouseButtons]::Left) {
         $menu = Build-Menu
         $menu.Show([System.Windows.Forms.Cursor]::Position)
+        try { [MascotNative]::SetForegroundWindow($menu.Handle) | Out-Null } catch { }
     }
 })
 
@@ -598,7 +622,9 @@ $notify.Add_MouseUp({
 
 $win.Add_MouseLeftButtonDown({
     if ($_.ClickCount -eq 2) { Open-Dashboard; return }
+    $script:Dragging = $true
     try { $win.DragMove() } catch { }
+    $script:Dragging = $false
     $Settings.left = $win.Left
     $Settings.top  = $win.Top
     Save-Settings
@@ -614,7 +640,7 @@ $win.Add_MouseRightButtonUp({
 function Ensure-Server {
     try {
         $probe = $http.GetStringAsync("$BaseUrl/healthz")
-        if ($probe.Wait(1200) -and -not $probe.IsFaulted) { return }
+        if ($probe.Wait(600) -and -not $probe.IsFaulted) { return }
     } catch { }
 
     # 안 떠 있으면 직접 띄운다
@@ -625,7 +651,7 @@ function Ensure-Server {
     try {
         Start-Process -FilePath $node.Source -ArgumentList "`"$serverJs`"" `
             -WorkingDirectory $Root -WindowStyle Hidden | Out-Null
-        Start-Sleep -Milliseconds 900
+        # 여기서 기다리지 않는다. 서버가 뜨는 대로 폴링 타이머가 알아서 잡는다.
     } catch { }
 }
 
@@ -636,7 +662,8 @@ $win.Add_SourceInitialized({
 })
 
 $win.Add_Loaded({
-    if ([double]$Settings.left -ge 0 -and [double]$Settings.top -ge 0) {
+    # 주 모니터 왼쪽/위에 있는 모니터는 좌표가 음수라 '0 이상' 으로 판정하면 안 된다
+    if ($null -ne $Settings.left -and $null -ne $Settings.top) {
         $win.Left = [double]$Settings.left
         $win.Top  = [double]$Settings.top
     } else {
