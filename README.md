@@ -46,10 +46,30 @@ git이 없으면 [ZIP 다운로드](https://github.com/Jonghyunpark95/claudestat
 | Windows: 스크립트 실행이 차단됨 | `setup.cmd` 우클릭 → 속성 → **차단 해제** 체크 |
 | 캐릭터가 계속 자고만 있음 | Claude Code를 껐다 켰는지 확인 |
 
-### 끄기 / 지우기
+### 끄기 / 다시 켜기 / 지우기
 
-- **끄기** — macOS는 메뉴바 아이콘, Windows는 트레이 아이콘 클릭 → **종료**
-- **지우기** — 폴더에서 `node install.js --uninstall` 실행 후 폴더 삭제
+**끄기** — macOS는 메뉴바 아이콘, Windows는 트레이 아이콘 클릭 → **종료**
+
+**다시 켜기** — 설치할 때 쓴 그 폴더에서
+
+| | 더블클릭 |
+|---|---|
+| 🍎 macOS | `ClaudeMascot.app` |
+| 🪟 Windows | `windows\start.vbs` |
+
+서버가 꺼져 있어도 펫이 알아서 같이 켜주니 이것만 하면 된다.
+(`setup.command` / `setup.cmd` 를 다시 눌러도 되지만 그건 재설치까지 한다)
+
+macOS에서 매번 폴더를 찾기 귀찮으면 `ClaudeMascot.app` 을 **응용 프로그램 폴더로
+드래그**해두면 Spotlight(⌘Space)에서 "claude" 만 쳐도 바로 뜬다.
+
+```bash
+cp -R ClaudeMascot.app /Applications/
+```
+
+**컴퓨터 켤 때 자동 실행** — `node install.js --autostart`
+
+**지우기** — 폴더에서 `node install.js --uninstall` 실행 후 폴더 삭제
 
 ---
 
