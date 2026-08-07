@@ -1,0 +1,129 @@
+/* Clawd 풍 8비트 도트 캐릭터 — 대시보드와 데스크톱 펫이 공유한다.
+   상태는 조상 요소의 [data-state] 로 결정된다. */
+
+.mascot {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+  shape-rendering: crispEdges;   /* 도트가 흐려지지 않게 */
+}
+
+/* ------------------------------------------------------------- 색 */
+
+.cl-o { fill: #c87e5f; transition: fill 0.4s; }   /* 몸통 (테라코타) */
+.cl-k { fill: #2b1e17; }                          /* 눈·입 */
+.cl-l { fill: #c3b5a6; }                          /* zzz (밝은 배경/어두운 배경 둘 다에서 보이게) */
+.cl-g { fill: #63c98d; }                          /* 완료 체크 */
+.cl-y { fill: #f2c14e; }                          /* 물음표·반짝이 */
+
+[data-state="idle"]  .cl-o { fill: #8e6350; }     /* 잘 땐 어둡게 */
+[data-state="stale"] .cl-o { fill: #6d6862; }     /* 조용하면 회색 */
+
+/* ------------------------------------------------------------- 기본 표시 */
+
+.cl-face, .cl-prop, .cl-arms { display: none; }
+
+/* 다리 프레임 전환은 display 대신 opacity 로 한다 (모든 브라우저에서 안전) */
+.cl-leg-frame { opacity: 0; }
+.cl-leg-a { opacity: 1; }
+
+.cl-hop { transform-box: fill-box; transform-origin: 50% 100%; }
+.cl-legs { transform-box: fill-box; transform-origin: 50% 100%; }
+
+/* ------------------------------------------------------------- idle: 자는 중 */
+
+[data-state="idle"] .cl-face-sleep { display: block; }
+[data-state="idle"] .cl-prop-zzz { display: block; }
+[data-state="idle"] .cl-hop { animation: clBreathe 4s steps(1, end) infinite; }
+[data-state="idle"] .cl-prop-zzz { animation: clZzz 3s steps(3, end) infinite; }
+
+/* 도트 캐릭터라 부드럽게 말고 한 칸씩 툭툭 움직인다 */
+@keyframes clBreathe {
+  0%, 49%   { transform: translateY(0); }
+  50%, 100% { transform: translateY(2px); }
+}
+/* 완전히 사라지는 구간을 두지 않는다 — 언제 봐도 자고 있는 게 보이도록 */
+@keyframes clZzz {
+  0%, 32%   { opacity: 1;    transform: translate(0, 4px); }
+  33%, 65%  { opacity: 0.85; transform: translate(2px, 0); }
+  66%, 100% { opacity: 0.45; transform: translate(4px, -4px); }
+}
+
+/* ------------------------------------------------------------- stale: 조용함 */
+
+[data-state="stale"] .cl-face-sleep { display: block; }
+[data-state="stale"] .cl-hop { animation: clBreathe 6s steps(1, end) infinite; }
+
+/* ------------------------------------------------------------- thinking */
+
+[data-state="thinking"] .cl-face-think { display: block; }
+[data-state="thinking"] .cl-hop { animation: clBreathe 1.6s steps(1, end) infinite; }
+[data-state="thinking"] .cl-face-think { animation: clLook 2.4s steps(1, end) infinite; }
+
+@keyframes clLook {
+  0%, 49%   { transform: translateX(0); }
+  50%, 100% { transform: translateX(7px); }
+}
+
+/* ------------------------------------------------------------- working */
+
+[data-state="working"] .cl-face-normal { display: block; }
+[data-state="working"] .cl-prop-spark { display: block; }
+[data-state="working"] .cl-hop { animation: clWalk 0.4s steps(1, end) infinite; }
+[data-state="working"] .cl-prop-spark { animation: clTwinkle 1.2s steps(2, end) infinite; }
+
+/* 다리 두 프레임을 번갈아 → 8비트 걷기 */
+[data-state="working"] .cl-leg-a { animation: clFlipA 0.4s steps(1, end) infinite; }
+[data-state="working"] .cl-leg-b { animation: clFlipB 0.4s steps(1, end) infinite; }
+
+@keyframes clWalk {
+  0%, 49%   { transform: translateY(0); }
+  50%, 100% { transform: translateY(-3px); }
+}
+@keyframes clFlipA {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes clFlipB {
+  0%, 49%   { opacity: 0; }
+  50%, 100% { opacity: 1; }
+}
+@keyframes clTwinkle {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0.15; }
+}
+
+/* ------------------------------------------------------------- waiting */
+
+[data-state="waiting"] .cl-face-alert { display: block; }
+[data-state="waiting"] .cl-prop-q { display: block; }
+[data-state="waiting"] .cl-arms { display: block; }
+[data-state="waiting"] .cl-hop { animation: clJump 0.5s steps(1, end) infinite; }
+[data-state="waiting"] .cl-prop-q { animation: clQ 0.5s steps(1, end) infinite; }
+
+@keyframes clJump {
+  0%, 49%   { transform: translateY(0); }
+  50%, 100% { transform: translateY(-9px); }
+}
+@keyframes clQ {
+  0%, 49%   { transform: translateY(0); opacity: 1; }
+  50%, 100% { transform: translateY(-4px); opacity: 0.75; }
+}
+
+/* ------------------------------------------------------------- done */
+
+[data-state="done"] .cl-face-happy { display: block; }
+[data-state="done"] .cl-prop-check { display: block; }
+[data-state="done"] .cl-arms { display: block; }
+[data-state="done"] .cl-hop { animation: clCheer 1.6s steps(1, end) infinite; }
+
+@keyframes clCheer {
+  0%, 74%   { transform: translateY(0); }
+  75%, 87%  { transform: translateY(-6px); }
+  88%, 100% { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot * { animation: none !important; }
+}

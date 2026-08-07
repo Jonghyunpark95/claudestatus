@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Claude 마스코트</title>
+<link rel="icon" href="data:," />
+<link rel="stylesheet" href="mascot.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body data-mood="idle">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>Claude 마스코트</span>
+    </div>
+    <div class="topbar-right">
+      <span id="conn" class="conn" title="서버 연결 상태">연결 중…</span>
+      <button id="btn-sound" class="chip" type="button" title="물어볼 게 생기면 소리로 알림">🔔 소리 끔</button>
+      <button id="btn-compact" class="chip" type="button" title="한 마리만 크게 보기">🗔 컴팩트</button>
+    </div>
+  </header>
+
+  <main id="stage" class="stage"></main>
+
+  <div id="empty" class="empty">
+    <!-- 잠자는 마스코트가 app.js 에서 여기 복제된다 -->
+    <div id="empty-art" class="empty-art card" data-state="idle"></div>
+    <p class="empty-title">아직 붙은 세션이 없어요</p>
+    <p class="empty-sub">
+      VS Code에서 Claude Code를 켜고 아무 말이나 걸어보세요.<br />
+      (설치가 끝났다면 Claude Code를 한 번 재시작해야 hook이 적용돼요)
+    </p>
+  </div>
+
+  <template id="card-tpl">
+    <article class="card" data-state="idle">
+      <div class="bubble"><span class="bubble-text"></span></div>
+      <div class="mascot-wrap"></div>
+      <div class="status">
+        <span class="dot"></span>
+        <span class="status-text"></span>
+        <span class="elapsed"></span>
+      </div>
+      <div class="meta">
+        <div class="project" title=""></div>
+        <div class="detail"></div>
+      </div>
+      <footer class="cardfoot">
+        <span class="toolcount"></span>
+        <span class="model"></span>
+      </footer>
+    </article>
+  </template>
+
+  <script src="mascot.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+/* 데스크톱 펫 — 배경이 완전히 투명하다. 바탕화면 위에 캐릭터만 떠 있는 형태.
+   창 크기를 바꿔도 비율이 유지되도록 길이는 % 와 vmin 으로 잡는다. */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 말풍선(위) / 캐릭터(가운데) / 캡션(아래)을 절대 배치해서
+   창 크기가 어떻게 바뀌어도 캐릭터가 항상 창 안에 딱 맞게 한다. */
+.pet {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+/* 어떤 바탕화면 위에서도 캐릭터가 읽히도록 그림자를 깐다 */
+.pet-mascot {
+  position: absolute;
+  left: 1.5%;
+  right: 1.5%;
+  top: 10%;     /* 말풍선 자리 */
+  bottom: 13%;  /* 캡션 자리 */
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+}
+
+/* viewBox 가 정사각이라 xMidYMid meet 으로 박스 안에 정확히 들어간다 */
+.pet-mascot .mascot { width: 100%; height: 100%; }
+
+/* ------------------------------------------------------------- 말풍선 */
+
+.pet-bubble {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -4px);
+  max-width: 100%;
+  padding: 2.8vmin 5.7vmin;
+  border-radius: 6.3vmin;
+  background: rgba(30, 27, 23, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ece4da;
+  font-size: clamp(8px, 6.25vmin, 13px);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.pet-bubble.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* 말풍선 꼬리 */
+.pet-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 7px; height: 7px;
+  margin-left: -3.5px;
+  background: inherit;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  transform: rotate(45deg);
+}
+
+[data-state="waiting"] .pet-bubble {
+  background: rgba(60, 46, 16, 0.95);
+  border-color: rgba(242, 193, 78, 0.6);
+  color: #f8e3a8;
+}
+[data-state="done"] .pet-bubble {
+  background: rgba(22, 44, 32, 0.95);
+  border-color: rgba(99, 201, 141, 0.5);
+  color: #b8ecce;
+}
+
+/* ------------------------------------------------------------- 캡션 */
+
+/* 흰 바탕화면 위에서도 읽혀야 하므로 글자색+그림자가 아니라
+   말풍선과 같은 불투명 알약 배경을 깐다. */
+.pet-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 2%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 4px);
+  padding: 1.2vmin 4.6vmin;
+  border-radius: 5.2vmin;
+  background: rgba(28, 24, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ece4da;
+  line-height: 1.4;
+  font-size: clamp(7.5px, 5.7vmin, 12px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.pet-caption.show { opacity: 1; }
+
+[data-state="waiting"] .pet-caption {
+  background: rgba(58, 44, 14, 0.94);
+  border-color: rgba(242, 193, 78, 0.6);
+  color: #ffd977;
+}
+[data-state="done"] .pet-caption {
+  background: rgba(20, 44, 31, 0.94);
+  border-color: rgba(99, 201, 141, 0.5);
+  color: #9fe8bd;
+}
+
+/* ------------------------------------------------------------- 배지 */
+
+/* 세션이 여럿일 때 오른쪽 위에 개수 */
+.pet-badge {
+  position: absolute;
+  top: 15%;
+  right: 0;
+  min-width: 9.7vmin;
+  height: 9.7vmin;
+  padding: 0 2.8vmin;
+  border-radius: 999px;
+  background: #d97757;
+  color: #1a1310;
+  font-size: clamp(7.5px, 5.7vmin, 12px);
+  font-weight: 800;
+  line-height: 9.7vmin;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.pet-badge.show { opacity: 1; }
+[data-state="waiting"] .pet-badge { background: #f2c14e; }
+
+/* 서버가 끊기면 캐릭터를 흐리게 */
+body[data-conn="off"] .pet-mascot {
+  opacity: 0.4;
+  filter: grayscale(0.8) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
+}
+
+/* ------------------------------------------------------------- 아주 작을 때
+   말풍선은 어차피 글자가 다 잘리므로 접고, 캐릭터를 크게 쓴다.
+   자세한 내용은 더블클릭해서 대시보드에서 본다. */
+@media (max-width: 115px) {
+  .pet-bubble { display: none; }
+  .pet-mascot { top: 3%; bottom: 15%; }
+  .pet-badge { top: 4%; }
+}
