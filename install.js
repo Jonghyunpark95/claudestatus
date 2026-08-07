@@ -2,11 +2,11 @@
 'use strict';
 
 /**
- * Claude Code hook 설치/제거
+ * Claude Code hook 설치/제거 (macOS · Windows · Linux)
  *
  *   node install.js              hook 설치 (~/.claude/settings.json)
  *   node install.js --uninstall  hook 제거
- *   node install.js --autostart  hook 설치 + 로그인 시 서버 자동 실행(LaunchAgent)
+ *   node install.js --autostart  hook 설치 + 로그인 시 자동 실행 등록
  *   node install.js --uninstall --autostart  둘 다 제거
  *
  * 기존 설정은 건드리지 않고 mascot 항목만 넣고 뺀다. 쓰기 전에 항상 백업.
@@ -18,7 +18,10 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const HERE = __dirname;
-const HOOK = path.join(HERE, 'hooks', 'mascot-hook.sh');
+const IS_WIN = process.platform === 'win32';
+
+// 윈도우는 .cmd(내장 curl.exe 사용), 그 외는 .sh 를 쓴다
+const HOOK = path.join(HERE, 'hooks', IS_WIN ? 'mascot-hook.cmd' : 'mascot-hook.sh');
 const SETTINGS = path.join(os.homedir(), '.claude', 'settings.json');
 const PLIST_LABEL = 'com.claudemascot.server';
 const PLIST = path.join(os.homedir(), 'Library', 'LaunchAgents', `${PLIST_LABEL}.plist`);
@@ -35,7 +38,7 @@ const EVENTS = [
 ];
 
 const isMascotHook = (h) =>
-  h && typeof h.command === 'string' && h.command.includes('mascot-hook.sh');
+  h && typeof h.command === 'string' && /mascot-hook\.(sh|cmd)/.test(h.command);
 
 function readSettings() {
   if (!fs.existsSync(SETTINGS)) return {};
@@ -114,7 +117,37 @@ function plistXml() {
 `;
 }
 
-function autostart() {
+function startupVbs() {
+  const petPs1 = path.join(HERE, 'windows', 'pet.ps1');
+  return [
+    "' Claude 마스코트 — 로그인 시 자동 실행 (claudestatus 설치 스크립트가 만든 파일)",
+    'Dim shell',
+    'Set shell = CreateObject("WScript.Shell")',
+    `shell.Run "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""${petPs1}""", 0, False`,
+    '',
+  ].join('\r\n');
+}
+
+function autostartWindows() {
+  const startupDir = path.join(
+    os.homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows',
+    'Start Menu', 'Programs', 'Startup');
+  const target = path.join(startupDir, 'ClaudeMascot.vbs');
+
+  if (REMOVE) {
+    if (fs.existsSync(target)) fs.unlinkSync(target);
+    console.log('✓ 자동 실행 해제');
+    return;
+  }
+  if (!fs.existsSync(startupDir)) {
+    console.error(`✗ 시작프로그램 폴더를 찾을 수 없습니다: ${startupDir}`);
+    return;
+  }
+  fs.writeFileSync(target, startupVbs());
+  console.log(`✓ 자동 실행 등록 (로그인 시 펫 시작) → ${target}`);
+}
+
+function autostartMac() {
   const quiet = { stdio: 'ignore' };
   if (REMOVE) {
     try { execFileSync('launchctl', ['unload', PLIST], quiet); } catch {}
@@ -129,13 +162,18 @@ function autostart() {
   console.log(`✓ 자동 실행 등록 (로그인 시 서버 시작) → ${PLIST}`);
 }
 
+function autostart() {
+  if (IS_WIN) autostartWindows();
+  else autostartMac();
+}
+
 // ------------------------------------------------------------------ 실행
 
 if (!fs.existsSync(HOOK)) {
   console.error(`✗ hook 스크립트를 찾을 수 없습니다: ${HOOK}`);
   process.exit(1);
 }
-fs.chmodSync(HOOK, 0o755);
+try { fs.chmodSync(HOOK, 0o755); } catch {}   // 윈도우에선 의미 없다
 
 installHooks();
 if (AUTOSTART) autostart();
@@ -143,7 +181,10 @@ if (AUTOSTART) autostart();
 if (!REMOVE) {
   console.log('');
   console.log('다음 단계:');
-  console.log('  1) 서버 실행:  node server.js      (또는 ./start.command 더블클릭)');
-  console.log('  2) 브라우저:   http://127.0.0.1:4573');
-  console.log('  3) 실행 중인 Claude Code 세션은 재시작해야 hook이 적용됩니다.');
+  if (IS_WIN) {
+    console.log('  1) 펫 실행:  windows\\start.vbs 더블클릭');
+  } else {
+    console.log('  1) 펫 빌드/실행:  ./mac/build.sh  &&  open ClaudeMascot.app');
+  }
+  console.log('  2) 실행 중인 Claude Code 세션을 재시작해야 hook이 적용됩니다.');
 }

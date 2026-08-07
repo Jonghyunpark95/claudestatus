@@ -1,5 +1,6 @@
 /* Clawd 풍 8비트 도트 캐릭터 — 대시보드와 데스크톱 펫이 공유한다.
-   상태는 조상 요소의 [data-state] 로 결정된다. */
+   상태는 조상 요소의 [data-state] 로 결정된다.
+   색은 sprite.js 의 palette 를 mascot.js 가 CSS 변수로 심어준다. */
 
 .mascot {
   width: 100%;
@@ -11,14 +12,14 @@
 
 /* ------------------------------------------------------------- 색 */
 
-.cl-o { fill: #c87e5f; transition: fill 0.4s; }   /* 몸통 (테라코타) */
-.cl-k { fill: #2b1e17; }                          /* 눈·입 */
-.cl-l { fill: #c3b5a6; }                          /* zzz (밝은 배경/어두운 배경 둘 다에서 보이게) */
-.cl-g { fill: #63c98d; }                          /* 완료 체크 */
-.cl-y { fill: #f2c14e; }                          /* 물음표·반짝이 */
+.cl-o { fill: var(--cl-o); transition: fill 0.4s; }   /* 몸통 (테라코타) */
+.cl-k { fill: var(--cl-k); }                          /* 눈·입 */
+.cl-l { fill: var(--cl-l); }                          /* zzz (밝은/어두운 배경 둘 다에서 보이게) */
+.cl-g { fill: var(--cl-g); }                          /* 완료 체크 */
+.cl-y { fill: var(--cl-y); }                          /* 물음표·반짝이 */
 
-[data-state="idle"]  .cl-o { fill: #8e6350; }     /* 잘 땐 어둡게 */
-[data-state="stale"] .cl-o { fill: #6d6862; }     /* 조용하면 회색 */
+[data-state="idle"]  .cl-o { fill: var(--cl-body-idle); }  /* 잘 땐 어둡게 */
+[data-state="stale"] .cl-o { fill: var(--cl-body-stale); } /* 조용하면 회색 */
 
 /* ------------------------------------------------------------- 기본 표시 */
 
